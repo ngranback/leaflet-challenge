@@ -21,32 +21,44 @@ L.tileLayer("https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_toke
 
 
 
+
 //  API query URL
 var url = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson';
-
 // Grab the data with d3
 d3.json(url).then(function(response) {
-
   const geoData = response;
   const quakes = geoData['features'];
 
-
-  // get max depth for color function
-  var a = 0;
-
   // getColor function decides the color based on the value
-  function getColor(depth) {
-    return  depth > 300 ? '#FF0D0D' :
-            depth > 180  ? '#FF4E11' :
-            depth > 120  ? '#FF8E15' :
-            depth > 60  ? '#FAB733' :
-            depth > 30   ? '#FD8D3C' :
-            depth > 10   ? '#ACB334' :
-                            '#FFEDA0';
-}
+  function getColor(x) {
+    return  x > 7.5 ? '#FF0D0D' :
+            x > 6  ? '#FF4E11' :
+            x > 4.5  ? '#FF8E15' :
+            x > 3.5  ? '#FAB733' :
+            x > 2   ? '#ACB334' :
+                            '#69B34C';
+  }
+
+  // getSized function decides the color based on the value
+  function getSized(depth) {
+    return Math.sqrt(depth) * 2;
+  }
 
 
+  // Add a legend to explain the color scheme
+  var legend = L.control({position: 'bottomright'});
 
+    legend.onAdd = function (map) {
+        var div = L.DomUtil.create('div', 'info legend'),
+        mags = [0, 2, 3.5, 4.5, 6, 7.5];
+        // loop through our density intervals and generate a label with a colored square for each interval
+        for (var i = 0; i < mags.length; i++) {
+            div.innerHTML +=
+                '<i style="background:' + getColor(mags[i] + 1) + '"></i> ' +
+                mags[i] + (mags[i + 1] ? '&ndash;' + mags[i + 1] + '<br>' : '+');}
+    return div;
+  };
+  legend.addTo(myMap);
 
 
 
@@ -56,19 +68,22 @@ d3.json(url).then(function(response) {
     var this_long = quakes[i].geometry.coordinates[0];
     var this_lat = quakes[i].geometry.coordinates[1];
     var magnitude = quakes[i].properties.mag;
+    var depth = quakes[i].geometry.coordinates[2];
 
     L.circleMarker([this_lat,this_long], {
       fillOpacity: 0.85,
       color: 'white',
-      fillColor: getColor(quakes[i].geometry.coordinates[2]),
-      // Setting our circle's radius equal to the output of our markerSize function
-      // This will make our marker's size proportionate to its population
-      radius: magnitude * 4
+      // Color will be based on magnitude because it is more eye catching
+      // and magnitude feels like a better gauge for how bad a quake is
+      fillColor: getColor(magnitude),
+      
+      // Radius will be based on depth
+      radius: getSized(depth)
     })
     .bindPopup(
       "<h1>" + quakes[i].properties.place + "</h1> <hr> " +
-      "<h3>Magnitude: " + magnitude + " km</h3>"+
-      "<h3>Depth: " + quakes[i].geometry.coordinates[2] + " km</h3>")
+      "<h3>Magnitude: " + magnitude + "</h3>"+
+      "<h3>Depth: " + depth + " km</h3>")
     .addTo(myMap);
 
   }
@@ -76,3 +91,7 @@ d3.json(url).then(function(response) {
   
 
 });
+
+
+
+
